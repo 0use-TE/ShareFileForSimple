@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="ShareFileForSimple/ShareFileForSimple.csproj" />
+  <Project Path="ShareFileForSimpleTest/ShareFileForSimpleTest.csproj" />
+</Solution>

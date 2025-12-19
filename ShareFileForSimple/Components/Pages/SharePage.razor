@@ -1,0 +1,106 @@
+﻿@page "/"
+@using Microsoft.EntityFrameworkCore
+@using ShareFileForSimple.DataPersistent
+@using ShareFileForSimple.DataPersistent.Model
+@inject IJSRuntime JS
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+
+<MudToolBar Class="gap-2">
+    <MudTextField @bind-Value="searchStr" Placeholder="搜索文件名..."
+                  Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.End"
+                  AdornmentIcon="@Icons.Material.Outlined.Search" Style="max-width:200px"
+                  Immediate="true" />
+    <MudSpacer />
+    <MudDatePicker @bind-Date="currentDateTime" Variant="Variant.Outlined" Margin="Margin.Dense"  />
+    <MudButton OnClick="TriggerUpload" Variant="Variant.Filled" Color="Color.Primary"
+               EndIcon="@Icons.Material.Outlined.UploadFile">上传</MudButton>
+</MudToolBar>
+
+<MudDivider />
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <MudGrid>
+        @foreach (var record in FilteredRecords)
+        {
+            <MudItem xs="12" sm="6" md="4" lg="3"  >
+                <MudCard Elevation="3" Class="rounded-lg hover-elevate"  Style="height:100%;max-height:400px">
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.h6" Inline="true">@record.FileDescription</MudText>
+                            <MudText Typo="Typo.caption" Class="ml-2">@record.CreateDateTime.ToString("HH:mm")</MudText>
+                        </CardHeaderContent>
+                        <CardHeaderActions>
+                            <MudButton  OnClick="@(() => DownloadAllFiles(record.Key))" EndIcon="@Icons.Material.Filled.FolderZip" Color="Color.Info" >
+                                <MudText Typo="Typo.h6">下载全部</MudText>
+                            </MudButton>
+                        </CardHeaderActions>
+                    </MudCardHeader>
+                    <MudCardContent Style="overflow-y:scroll">
+                        <MudList T="string" Dense="true" >
+                            @foreach (var file in record.FileItems)
+                            {
+                                <MudListItem Icon="@Icons.Material.Filled.AttachFile"  @onpointerdown="@(() => DownloadFile(file.Id))">
+                                    <div class="d-flex align-center justify-space-between">
+                                        <MudText Typo="Typo.body2" Class="text-truncate" Style="max-width: 150px;">@file.FileName</MudText>
+                                    </div>
+                                </MudListItem>
+                            }
+                        </MudList>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        }
+    </MudGrid>
+</MudContainer>
+
+@code {
+    private string? searchStr;
+    private DateTime? currentDateTime = DateTime.Today;
+    private List<FileRecordModel> allRecords = new();
+
+    private IEnumerable<FileRecordModel> FilteredRecords => allRecords
+            .Where(r => r.CreateDateTime.Date == currentDateTime?.Date) // 日期过滤
+            .Where(r => string.IsNullOrWhiteSpace(searchStr) ||
+                        r.FileDescription.Contains(searchStr, StringComparison.OrdinalIgnoreCase) ||
+                        r.FileItems.Any(f => f.FileName.Contains(searchStr, StringComparison.OrdinalIgnoreCase))); // 描述或文件名过滤
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+    private async Task DownloadAllFiles(Guid recordKey)
+    {
+        // 同样使用 assign 避免空白页
+        await JS.InvokeVoidAsync("location.assign", $"/api/Upload/DownloadAll/{recordKey}");
+    }
+    private async Task LoadData()
+    {
+        using var db = await DbFactory.CreateDbContextAsync();
+        // 包含 FileItems 一起查出来
+        allRecords = await db.FileRecordModels
+            .Include(r => r.FileItems)
+            .OrderByDescending(r => r.CreateDateTime)
+            .ToListAsync();
+    }
+
+    private async Task TriggerUpload()
+    {
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<UploadDialog>("上传文件", options);
+        var result = await dialog.Result;
+
+        if (result != null && !result.Canceled)
+        {
+            Snackbar.Add("上传成功!", Severity.Success);
+            await LoadData(); // 重新加载数据库
+        }
+    }
+
+    private async Task DownloadFile(Guid fileId)
+    {
+        // 不再使用 open, _blank
+        await JS.InvokeVoidAsync("location.assign", $"/api/Upload/Download/{fileId}");
+    }
+}

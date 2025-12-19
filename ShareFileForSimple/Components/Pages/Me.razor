@@ -1,0 +1,57 @@
+﻿<MudDialog>
+	<TitleContent>
+		<div class="d-flex align-center">
+			<MudIcon Icon="@Icons.Material.Filled.Info" Class="mr-2" />
+			<MudText Typo="Typo.h6">关于项目</MudText>
+		</div>
+	</TitleContent>
+	<DialogContent>
+		<MudCard Outlined Class="pa-4">
+
+			<MudStack Spacing="4">
+				<MudText Typo="Typo.subtitle1" Color="Color.Primary" Inline="true"><b>Simple Share</b></MudText>
+				<MudText Typo="Typo.body2" Class="mt-2">
+					这是一个专为机房内网环境打造的<b>极简文件共享工具</b>。
+					旨在解决多台电脑间临时传输文件的不便，支持多文件拖拽上传、实时进度显示及自动过期清理功能。
+				</MudText>
+				<MudAlert Severity="Severity.Warning" Dense="true" Variant="Variant.Outlined">
+					<MudText Typo="Typo.body2">
+						文件最多保存3天，请勿传输敏感或涉密数据。
+					</MudText>
+				</MudAlert>
+
+				<MudDivider />
+				<div class="d-flex align-center pa-2">
+					<MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Large" Class="mr-4">
+						<MudIcon Icon="@Icons.Material.Filled.Person" />
+					</MudAvatar>
+					<div>
+						<MudText Typo="Typo.body1"><b>作者：Ouse</b></MudText>
+						<MudText Typo="Typo.caption">专注于Dotnet领域,全栈软件工程师,Work in 酷爱智能!</MudText>
+					</div>
+				</div>
+				<MudList T="string" Clickable="true">
+					<MudListItem Icon="@Icons.Custom.Brands.GitHub"
+								 Href="https://github.com/0use-TE"
+								 Target="_blank">
+						<MudText Typo="Typo.body2">GitHub: https://github.com/0use-TE</MudText>
+					</MudListItem>
+					<MudListItem Icon="@Icons.Material.Filled.Email"
+								 Href="mailto:2216528769@qq.com">
+						<MudText Typo="Typo.body2">Email: 2216528769@@qq.com</MudText>
+					</MudListItem>
+				</MudList>
+			</MudStack>
+		</MudCard>
+
+	</DialogContent>
+	<DialogActions>
+		<MudButton Color="Color.Primary" OnClick="Close" Variant="Variant.Outlined">了解了</MudButton>
+	</DialogActions>
+</MudDialog>
+
+@code {
+	[CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+
+	private void Close() => MudDialog.Close();
+}
