@@ -6,7 +6,7 @@
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
-
+<div class="d-flex flex-column" style="height: 88vh; overflow: hidden;">
 <MudToolBar Class="gap-2">
     <MudTextField @bind-Value="searchStr" Placeholder="搜索文件名..."
                   Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.End"
@@ -20,7 +20,7 @@
 
 <MudDivider />
 
-<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4 flex-grow-1"  Style="overflow-y: auto;">
     <MudGrid>
         @foreach (var record in FilteredRecords)
         {
@@ -54,7 +54,7 @@
         }
     </MudGrid>
 </MudContainer>
-
+</div>
 @code {
     private string? searchStr;
     private DateTime? currentDateTime = DateTime.Today;
