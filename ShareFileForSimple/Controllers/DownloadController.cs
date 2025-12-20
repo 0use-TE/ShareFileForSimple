@@ -27,6 +27,10 @@ public class UploadController : ControllerBase
 
         var dateFolder = DateTime.Now.ToString("yyyy-MM-dd");
         var savePath = Path.Combine(_storageRoot, dateFolder);
+        if(!Directory.Exists(savePath))
+        {
+            Directory.CreateDirectory(savePath);
+        }
 
         var record = new FileRecordModel { FileDescription = description, CreateDateTime=DateTime.Now };
 
