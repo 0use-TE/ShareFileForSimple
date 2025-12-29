@@ -1,7 +1,9 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using MudBlazor.Services;
 using ShareFileForSimple.Components;
 using ShareFileForSimple.DataPersistent;
+using ShareFileForSimple.Options;
 using ShareFileForSimple.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -22,7 +24,8 @@ var cs = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
     options.UseSqlite(cs));
 
-builder.Services.AddControllers(); 
+builder.Services.AddControllers();
+builder.Services.Configure<UploadSettings>(builder.Configuration.GetSection("UploadSettings"));
 
 var app = builder.Build();
 

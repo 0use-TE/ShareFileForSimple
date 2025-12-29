@@ -1,4 +1,4 @@
-﻿window.initDragAndDrop = (zoneId, inputId) => {
+﻿window.initDragAndDrop = (zoneId, inputId,singleUploadMaxSizeMB) => {
     const dropZone = document.getElementById(zoneId);
     const fileInput = document.getElementById(inputId);
     const preview = document.getElementById('filePreview');
@@ -15,7 +15,18 @@
             return false;
         }
 
-        // 2. 显示预览
+        // 2. 总大小限制校验 (新增)
+        const totalSizeInBytes = Array.from(files).reduce((sum, file) => sum + file.size, 0);
+        const maxSizeBytes = singleUploadMaxSizeMB * 1024 * 1024;
+
+        if (totalSizeInBytes > maxSizeBytes) {
+            alert(`总文件大小不能超过 ${singleUploadMaxSizeMB}MB！(当前: ${(totalSizeInBytes / 1024 / 1024).toFixed(2)}MB)`);
+            fileInput.value = ""; // 清空
+            if (preview) preview.innerHTML = "";
+            return false;
+        }
+
+        // 3. 显示预览
         if (preview) {
             if (files.length > 0) {
                 const fileNames = Array.from(files).map(f => f.name).join(', ');
@@ -74,7 +85,7 @@ window.startUpload = (dotNetHelper, inputId, description) => {
     if (!fileInput || fileInput.files.length === 0) {
         alert("请先选择文件！");
         dotNetHelper.invokeMethodAsync("UploadFinished", false);
-        return;
+        return true;
     }
 
     if (fileInput.files.length > 9) {

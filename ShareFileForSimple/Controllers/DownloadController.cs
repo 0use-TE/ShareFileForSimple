@@ -1,8 +1,10 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using ShareFileForSimple.DataPersistent;
 using ShareFileForSimple.DataPersistent.Model;
+using ShareFileForSimple.Options;
 using System.IO.Compression;
 namespace ShareFileForSimple.Controllers;
 
@@ -12,18 +14,31 @@ public class UploadController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
     private readonly string _storageRoot;
+    private readonly IOptions<UploadSettings> _uploadSettings;
 
-    public UploadController(ApplicationDbContext context, IConfiguration config)
+    public UploadController(ApplicationDbContext context, IConfiguration config,IOptions<UploadSettings> uploadSettings)
     {
+        _uploadSettings = uploadSettings;
         _context = context;
         _storageRoot = config["UploadSettings:StorageRoot"] ?? "wwwroot/uploads";
     }
 
     [HttpPost]
+    [DisableRequestSizeLimit]
     [Consumes("multipart/form-data")]
     public async Task<IActionResult> PostFiles([FromForm] string description, [FromForm] List<IFormFile> files)
     {
         if (files == null || files.Count == 0) return BadRequest("No files.");
+
+        long totalBytes = 0;
+        foreach (var file in files)
+        {
+            if (file.Length > _uploadSettings.Value.SingleUploadMaxStorageSizeMB*1024*1024)
+            {
+                return BadRequest($"文件 {file.FileName} 超过单文件限制 {_uploadSettings.Value.MaxStorageSizeMB}MB");
+            }
+            totalBytes += file.Length;
+        }
 
         var dateFolder = DateTime.Now.ToString("yyyy-MM-dd");
         var savePath = Path.Combine(_storageRoot, dateFolder);

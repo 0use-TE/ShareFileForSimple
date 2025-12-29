@@ -1,5 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using ShareFileForSimple.DataPersistent;
+using ShareFileForSimple.Options;
 
 namespace ShareFileForSimple.Services
 {
@@ -12,14 +14,14 @@ namespace ShareFileForSimple.Services
         private readonly string _uploadRoot;
         private readonly long _maxSizeBytes;
 
-        public FileCleanupService(IServiceProvider serviceProvider, IConfiguration config, ILogger<FileCleanupService> logger)
+        public FileCleanupService(IServiceProvider serviceProvider, IConfiguration config, ILogger<FileCleanupService> logger,IOptions<UploadSettings> uploadSettings)
         {
             _serviceProvider = serviceProvider;
             _config = config;
             _logger = logger;
 
-            _uploadRoot = Path.GetFullPath(_config.GetValue<string>("StorageSettings:UploadPath", "wwwroot/uploads"));
-            _maxSizeBytes = _config.GetValue<long>("StorageSettings:MaxStorageSizeMB", 5000) * 1024 * 1024;
+            _uploadRoot = Path.Combine(uploadSettings.Value.StorageRoot, "wwwroot/uploads");
+            _maxSizeBytes = uploadSettings.Value.MaxStorageSizeMB * 1024 * 1024;
 
             // 确保目录存在
             if (!Directory.Exists(_uploadRoot)) Directory.CreateDirectory(_uploadRoot);

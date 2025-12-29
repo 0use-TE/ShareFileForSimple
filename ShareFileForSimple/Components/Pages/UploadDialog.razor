@@ -1,96 +1,104 @@
-﻿@inject ISnackbar Snackbar
+﻿@using Microsoft.Extensions.Options
+@using ShareFileForSimple.Options
+@inject ISnackbar Snackbar
+@inject IOptions<UploadSettings> UploadSettings
 <MudDialog>
-	<TitleContent>上传新共享</TitleContent>
-	<DialogContent>
-		<MudStack Spacing="4">
-			<MudTextField @bind-Value="Description" Label="记录名称" Variant="Variant.Outlined" Required="true" />
+    <TitleContent>上传新共享</TitleContent>
+    <DialogContent>
+        <MudStack Spacing="4">
+            <MudTextField @bind-Value="Description" Label="记录名称" Variant="Variant.Outlined" Required="true" />
 
-			<div id="dropZone" class="pa-10 border-2 border-dashed mud-border-primary rounded d-flex flex-column align-center justify-center"
-				 style="transition: all 0.3s ease;">
+            <div id="dropZone" class="pa-10 border-2 border-dashed mud-border-primary rounded d-flex flex-column align-center justify-center"
+                 style="transition: all 0.3s ease;">
 
-				<MudIcon Icon="@Icons.Material.Outlined.CloudUpload" Size="Size.Large" Color="Color.Primary" />
+                <MudIcon Icon="@Icons.Material.Outlined.CloudUpload" Size="Size.Large" Color="Color.Primary" />
 
-				<input type="file" id="uploadFilesInput" multiple style="display:none" />
+                <input type="file" id="uploadFilesInput" multiple style="display:none" />
 
-				<MudText Typo="Typo.body1">将文件拖拽到此处 或 <MudLink OnClick="OpenFilePicker">点击浏览</MudLink></MudText>
-				<MudText Typo="Typo.caption" Class="mt-2">最大 30MB/文件，最多 9 个</MudText>
+                <MudText Typo="Typo.body1">将文件拖拽到此处 或 <MudLink OnClick="OpenFilePicker">点击浏览</MudLink></MudText>
+                <MudText Typo="Typo.caption" Class="mt-2">总大小不得超过 @maxSize MB，最多 9 个</MudText>
 
-				<div id="filePreview" class="mt-2"></div>
-			</div>
+                <div id="filePreview" class="mt-2"></div>
+            </div>
 
-			@if (isUploading)
-			{
-				<MudProgressLinear Color="Color.Primary" Value="@progress" Class="my-2" />
-				<MudText Typo="Typo.caption">正在上传: @progress%</MudText>
-			}
-		</MudStack>
-	</DialogContent>
-	<DialogActions>
-		<MudButton OnClick="Cancel">取消</MudButton>
-		<MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit" Disabled="isUploading">开始上传</MudButton>
-	</DialogActions>
+            @if (isUploading)
+            {
+                <MudProgressLinear Color="Color.Primary" Value="@progress" Class="my-2" />
+                <MudText Typo="Typo.caption">正在上传: @progress%</MudText>
+            }
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">取消</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit" Disabled="isUploading">开始上传</MudButton>
+    </DialogActions>
 </MudDialog>
 <style>
-	.drop-zone-active {
-		background-color: var(--mud-palette-primary-hover);
-		border-style: solid !important;
-	}
+    .drop-zone-active {
+        background-color: var(--mud-palette-primary-hover);
+        border-style: solid !important;
+    }
 </style>
 @code {
-	[CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
-	[Inject] IJSRuntime JS { get; set; } = default!;
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+    [Inject] IJSRuntime JS { get; set; } = default!;
+    private int maxSize;
+    private string Description { get; set; } = $"分享_{DateTime.Now:HHmm}";
+    private bool isUploading = false;
+    private int progress = 0;
 
-	private string Description { get; set; } = $"分享_{DateTime.Now:HHmm}";
-	private bool isUploading = false;
-	private int progress = 0;
+    private void Cancel() => MudDialog.Cancel();
+    protected override void OnInitialized()
+    {
+        maxSize = UploadSettings.Value.SingleUploadMaxStorageSizeMB;
+        base.OnInitialized();
+    }
+    // 当 Dialog 加载完成后，初始化拖拽监听
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("initDragAndDrop", "dropZone", "uploadFilesInput", maxSize);
+        }
+    }
 
-	private void Cancel() => MudDialog.Cancel();
-	// 当 Dialog 加载完成后，初始化拖拽监听
-	protected override async Task OnAfterRenderAsync(bool firstRender)
-	{
-		if (firstRender)
-		{
-			await JS.InvokeVoidAsync("initDragAndDrop", "dropZone", "uploadFilesInput");
-		}
-	}
+    private async Task OpenFilePicker()
+    {
+        await JS.InvokeVoidAsync("eval", "document.getElementById('uploadFilesInput').click()");
+    }
 
-	private async Task OpenFilePicker()
-	{
-		await JS.InvokeVoidAsync("eval", "document.getElementById('uploadFilesInput').click()");
-	}
+    private async Task Submit()
+    {
+        isUploading = true;
+        var dotNetObjRef = DotNetObjectReference.Create(this);
 
-	private async Task Submit()
-	{
-		isUploading = true;
-		var dotNetObjRef = DotNetObjectReference.Create(this);
+        // 核心：告诉 TS 去找 ID 为 "uploadFilesInput" 的元素
+        await JS.InvokeVoidAsync("startUpload", dotNetObjRef, "uploadFilesInput", Description);
+    }
 
-		// 核心：告诉 TS 去找 ID 为 "uploadFilesInput" 的元素
-		await JS.InvokeVoidAsync("startUpload", dotNetObjRef, "uploadFilesInput", Description);
-	}
+    [JSInvokable]
+    public void UpdateProgress(int value)
+    {
+        progress = value;
+        StateHasChanged();
+    }
 
-	[JSInvokable]
-	public void UpdateProgress(int value)
-	{
-		progress = value;
-		StateHasChanged();
-	}
-
-	[JSInvokable]
-	public void UploadFinished(bool success)
-	{
-		try
-		{
-			isUploading = false;
-			if (success) MudDialog.Close(DialogResult.Ok(true));
-			else
-			{
-				Snackbar.Add("上传失败,请联系管理员(2216528769@qq.com)!", Severity.Error);
-				StateHasChanged();
-			}
-		}
-		catch (Exception ex)
-		{
-			Snackbar.Add($"上传发生异常，详情:{ex.Message}", Severity.Error);
-		}
-	}
+    [JSInvokable]
+    public void UploadFinished(bool success)
+    {
+        try
+        {
+            isUploading = false;
+            if (success) MudDialog.Close(DialogResult.Ok(true));
+            else
+            {
+                Snackbar.Add("上传失败,请检查是否体积超过100M", Severity.Error);
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"上传发生异常，详情:{ex.Message}", Severity.Error);
+        }
+    }
 }
