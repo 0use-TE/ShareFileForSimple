@@ -7,6 +7,7 @@ Screenshot as follows.
 ![2](./docs/2.png)  
 ### Features
 1. Simple to use,just send and accept.
+1. Easily limit total and per-upload sizes.
 2. Easy to deploy,just download and run!.
 ### From Source
 1. Clone this repository.
@@ -14,6 +15,8 @@ Screenshot as follows.
 3. dotnet run,open the project.
 ### Deploy
 1. dotnet publish or download pre-built version from release in github.
+1. open appsettings.json and configure according to your needs
+![config](./docs/config.png)
 2. execute ./SimpleFileForShare
 ### End
 If you have any questions,just let me know(2216528769@qq.com)!
