@@ -1,0 +1,85 @@
+﻿@page "/allFile"
+
+@using Microsoft.EntityFrameworkCore
+@using ShareFileForSimple.DataPersistent
+@using ShareFileForSimple.DataPersistent.Model
+@inject IJSRuntime JS
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject IDbContextFactory<ApplicationDbContext> DbFactory
+<div class="d-flex flex-column" style="height: 88vh; overflow: hidden;">
+    <MudToolBar>
+        <MudTextField @bind-Text="searchStr" T="string" Immediate Placeholder="请输入要过滤的内容..."></MudTextField>
+    </MudToolBar>
+    <MudContainer MaxWidth="MaxWidth.ExtraLarge"  Class="mt-4 flex-grow-1" Style="overflow-y: auto;">
+        <MudGrid>
+            @foreach (var record in FilteredRecords)
+            {
+                <MudItem xs="12" sm="6" md="4" lg="3">
+                    <MudCard Elevation="3" Class="rounded-lg hover-elevate" Style="height:100%;max-height:400px">
+                        <MudCardHeader>
+                            <CardHeaderContent>
+                                <MudText Typo="Typo.h6" Inline="true">@record.FileDescription</MudText>
+                                <MudText Typo="Typo.caption" Class="ml-2">@record.CreateDateTime.ToString("HH:mm")</MudText>
+                            </CardHeaderContent>
+                            <CardHeaderActions>
+                                <MudButton OnClick="@(() => DownloadAllFiles(record.Key))" EndIcon="@Icons.Material.Filled.FolderZip" Color="Color.Info">
+                                    <MudText Typo="Typo.h6">下载全部</MudText>
+                                </MudButton>
+                            </CardHeaderActions>
+                        </MudCardHeader>
+                        <MudCardContent Style="overflow-y:scroll">
+                            <MudList T="string" Dense="true">
+                                @foreach (var file in record.FileItems)
+                                {
+                                    <MudListItem Icon="@Icons.Material.Filled.AttachFile" @onpointerdown="@(() => DownloadFile(file.Id))">
+                                        <div class="d-flex align-center justify-space-between">
+                                            <MudText Typo="Typo.body2" Class="text-truncate" Style="max-width: 150px;">@file.FileName</MudText>
+                                        </div>
+                                    </MudListItem>
+                                }
+                            </MudList>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+            }
+        </MudGrid>
+    </MudContainer>
+</div>
+@code{
+    private List<FileRecordModel> allRecords = new();
+
+    private string? searchStr;
+
+    private IEnumerable<FileRecordModel> FilteredRecords => allRecords
+            .Where(r => string.IsNullOrWhiteSpace(searchStr) ||
+                        r.FileDescription.Contains(searchStr, StringComparison.OrdinalIgnoreCase) ||
+                        r.FileItems.Any(f => f.FileName.Contains(searchStr, StringComparison.OrdinalIgnoreCase)))
+                        .OrderByDescending(x=>x.CreateDateTime); // 描述或文件名过滤
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+    private async Task DownloadAllFiles(Guid recordKey)
+    {
+        // 同样使用 assign 避免空白页
+        await JS.InvokeVoidAsync("location.assign", $"/api/Upload/DownloadAll/{recordKey}");
+    }
+    private async Task LoadData()
+    {
+        using var db = await DbFactory.CreateDbContextAsync();
+        // 包含 FileItems 一起查出来
+        allRecords = await db.FileRecordModels
+            .Include(r => r.FileItems)
+            .OrderByDescending(r => r.CreateDateTime)
+            .ToListAsync();
+    }
+
+    private async Task DownloadFile(Guid fileId)
+    {
+        // 不再使用 open, _blank
+        await JS.InvokeVoidAsync("location.assign", $"/api/Upload/Download/{fileId}");
+    }
+
+}

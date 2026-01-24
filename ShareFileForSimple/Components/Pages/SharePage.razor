@@ -60,6 +60,7 @@
     private DateTime? currentDateTime = DateTime.Today;
     private List<FileRecordModel> allRecords = new();
 
+
     private IEnumerable<FileRecordModel> FilteredRecords => allRecords
             .Where(r => r.CreateDateTime.Date == currentDateTime?.Date) // 日期过滤
             .Where(r => string.IsNullOrWhiteSpace(searchStr) ||
